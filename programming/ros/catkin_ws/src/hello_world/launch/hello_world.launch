@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+	<node name="hello_world_node" pkg="hello_world" type="hello_world_node.py" output="screen"/> 	
+</launch>

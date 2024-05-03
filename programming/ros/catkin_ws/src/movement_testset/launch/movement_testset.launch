@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+	<node name="movement_testset_node" pkg="movement_testset" type="movement_testset_node.py" output="screen"/> 	
+</launch>

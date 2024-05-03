@@ -1,0 +1,3 @@
+[submodule "programming/ros/catkin_ws/src/wam_core"]
+	path = programming/ros/catkin_ws/src/wam_core
+	url = git@git.ias.informatik.tu-darmstadt.de:ros/wam/wam_core.git
