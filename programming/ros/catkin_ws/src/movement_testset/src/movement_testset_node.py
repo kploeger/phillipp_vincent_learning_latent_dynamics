@@ -5,6 +5,8 @@
 
 import os
 
+import seaborn as sns
+import matplotlib.pyplot as plt
 import movement_generator as mg
 import numpy as np
 import pandas as pd
@@ -136,32 +138,13 @@ def main():
     rospy.init_node("movement_testset_node", anonymous=True)
     # rospy.Rate(500)  # 500hz
 
-    rospy.loginfo("Connecting to robot...")
-    # subscribe to joint states
-    joint_state_sub = rospy.Subscriber(
-        "/wam/joint_states", JointState, callback
-    )
-    # wait Subscriber to start
-    rospy.wait_for_message("/wam/joint_states", JointState)
-
-    # publish test movements
-    test_movements_pub = rospy.Publisher(
-        "/wam/motor_enc_joint_trajectory_controller/command",
-        JointTrajectory,
-        queue_size=10,
-    )
-
-    # wait Publisher to start
-    rospy.sleep(1)
-
-    print("\n    Ready!\n")
-
+    rospy.loginfo("Generating test movements...")
     # while not rospy.is_shutdown():
     # initialize movement generator for all four joints
-    mg_joint1 = mg.MovementGenerator(duration=10 * 1)
-    mg_joint2 = mg.MovementGenerator(duration=10 * 1)
-    mg_joint3 = mg.MovementGenerator(duration=10 * 1)
-    mg_joint4 = mg.MovementGenerator(duration=10 * 1)
+    mg_joint1 = mg.MovementGenerator(duration=10 * 1, iterations=30)
+    mg_joint2 = mg.MovementGenerator(duration=10 * 1, iterations=30)
+    mg_joint3 = mg.MovementGenerator(duration=10 * 1, iterations=30)
+    mg_joint4 = mg.MovementGenerator(duration=10 * 1, iterations=30)
     movements_joint1 = mg_joint1.generate()
     movements_joint2 = mg_joint2.generate()
     movements_joint3 = mg_joint3.generate()
@@ -176,15 +159,34 @@ def main():
     poss = np.insert(poss, [2], movements_joint3, axis=1)
     poss = np.insert(poss, [3], movements_joint4, axis=1)
     vels = np.zeros_like(poss)
-    times = np.linspace(0, 10 * 1, len(poss))
+    times = np.linspace(0, 30 * 1, len(poss))
 
     # make sure robot is in start position, 0.2 randians tolerance due to low gains
     # make sure you have a smooth transition from one to the next set of movements
 
-    test_movements_pub.publish(make_traj_msg(len(times), poss, vels, times))
-    rospy.sleep(10)
+    # publish test movements
+    test_movements_pub = rospy.Publisher(
+        "/wam/motor_enc_joint_trajectory_controller/command",
+        JointTrajectory,
+        queue_size=10,
+    )
+    # wait publisher to start
+    rospy.sleep(1)
 
-    dataset = pd.DataFrame(
+    rospy.loginfo("Connecting to robot...")
+    # subscribe to joint states
+    joint_state_sub = rospy.Subscriber(
+        "/wam/joint_states", JointState, callback
+    )
+    # wait Subscriber to start
+    rospy.wait_for_message("/wam/joint_states", JointState)
+    
+    print("\n    Ready!\n")
+
+    test_movements_pub.publish(make_traj_msg(len(times), poss, vels, times))
+    rospy.sleep(30)
+
+    df = pd.DataFrame(
         [
             joint_state_position_joint1,
             joint_state_velocity_joint1,
@@ -205,7 +207,7 @@ def main():
         ]
     ).T
 
-    dataset = dataset.rename(
+    df = df.rename(
         columns={
             0: "joint_state_pos_joint1",
             1: "joint_state_vel_joint1",
@@ -226,8 +228,17 @@ def main():
         }
     )
 
+    # Plotting with Seaborn
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    for i in range(4):
+        row, col = divmod(i, 2)
+        sns.lineplot(data=df.iloc[:, i*4], ax=axes[row, col])
+        axes[row, col].set_title(f"Position of Joint {i+1}")
+    plt.show()
+
+    # save testset to csv file in current working directory
     print(os.getcwd())
-    dataset.to_csv("testset.csv", index=False)
+    df.to_csv("testset.csv", index=False)
 
 
 if __name__ == "__main__":
